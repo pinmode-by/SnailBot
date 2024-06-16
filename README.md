@@ -17,7 +17,8 @@
  * Измеритель питающего напряжения
  * Звуковая и световая индикация
  * Возможность использования различных типов моторов
+
   
 SnailBot is open project of active obstacle robot.
 
-SnailBot is developed in pinMode club, Misk, Belarus
+SnailBot is developed in pinMode club, Minsk, Belarus
