@@ -19,7 +19,8 @@ const int MINSPEED = 80;
 const int MAXSPEED = 200;
 const int NUMSENS = 6;
 int sensorPins[NUMSENS] = { A5, A4, A3, A2, A1, A0 };
-int sensor[NUMSENS];
+int sensor[NUMSENS];    //sensor values
+int th[NUMSENS]= { 200, 200, 200, 200, 200, 200 };        //threshold for each sensor
 
 int getSpeed() {  // return base robot speed
   int a = analogRead(POT);
@@ -29,9 +30,18 @@ int getSpeed() {  // return base robot speed
 
 void readSensors() {
   for (int i = 0; i < NUMSENS; i++) {
-    sensor[i] = analogRead(sensorPins[i]);
+    sensor[i] = (analogRead(sensorPins[i])+analogRead(sensorPins[i]))/2;
   }
 }
+
+void calibration(int cycles){
+  drive(50,-50);
+  for(int i=0; i<cycles; i++){
+    readSensors();
+  }
+  drive(0,0);
+}
+
 
 void printSensors() {
   for (int i = 0; i < NUMSENS; i++) {
