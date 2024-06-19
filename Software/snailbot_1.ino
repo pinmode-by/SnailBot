@@ -18,9 +18,18 @@ int speed = 100;
 const int MINSPEED = 80;
 const int MAXSPEED = 200;
 const int NUMSENS = 6;
-int sensorPins[NUMSENS] = { A5, A4, A3, A2, A1, A0 };
-int sensor[NUMSENS];    //sensor values
-int th[NUMSENS]= { 200, 200, 200, 200, 200, 200 };        //threshold for each sensor
+int sensorPins[NUMSENS] = { A2, A1, A0, A5, A4, A3 };
+int sensor[NUMSENS];  //sensor values
+int maxSens[NUMSENS];
+int minSens[NUMSENS];
+
+int th[NUMSENS] = { 100, 100, 100, 100, 100, 100 };  //threshold for each sensor
+
+void beep(int freq, int ms) {
+  tone(BUZZ, freq);
+  delay(ms);
+  noTone(BUZZ);
+}
 
 int getSpeed() {  // return base robot speed
   int a = analogRead(POT);
@@ -30,16 +39,40 @@ int getSpeed() {  // return base robot speed
 
 void readSensors() {
   for (int i = 0; i < NUMSENS; i++) {
-    sensor[i] = (analogRead(sensorPins[i])+analogRead(sensorPins[i]))/2;
+    sensor[i] = analogRead(sensorPins[i]);  //+ analogRead(sensorPins[i])) / 2;
   }
 }
 
-void calibration(int cycles){
-  drive(50,-50);
-  for(int i=0; i<cycles; i++){
-    readSensors();
+byte digitLine() {
+  byte sum = 0B00000000;
+  byte w = 0B00000001 << (NUMSENS - 1);
+  for (int j = 0; j < NUMSENS; j++) {
+    if (sensor[j] > th[j]) sum = sum + w;
+    w = w / 2;
   }
-  drive(0,0);
+  return sum;
+}
+
+void calibration(int cycles) {
+  for (int j = 0; j < NUMSENS; j++) {
+    minSens[j] = 1023;
+    maxSens[j] = 0;
+  }
+  drive(50, -50);
+  for (int i = 0; i < cycles; i++) {
+    readSensors();
+    for (int j = 0; j < NUMSENS; j++) {
+      if (sensor[j] > maxSens[j]) maxSens[j] = sensor[j];
+      if (sensor[j] < minSens[j]) minSens[j] = sensor[j];
+    }
+  }
+  drive(0, 0);
+  for (int j = 0; j < NUMSENS; j++) {
+    //[j] = (minSens[j] + maxSens[j]) / 2;
+    Serial.print(th[j]);
+    Serial.print("  ");
+  }
+  Serial.println();
 }
 
 
@@ -48,7 +81,8 @@ void printSensors() {
     Serial.print(sensor[i]);
     Serial.print("  ");
   }
-  Serial.println();
+  Serial.print(" => ");
+  Serial.println(digitLine(), BIN);
 }
 
 void drive(int left, int right) {
@@ -85,34 +119,77 @@ void setup() {
 
   digitalWrite(FLED, HIGH);
   digitalWrite(BLED, HIGH);
-  tone(BUZZ, 440);
-  delay(500);
-  noTone(BUZZ);
-  delay(1500);
+  beep(440, 200);
+  beep(880, 300);
+  beep(1760, 400);
+
+  delay(100);
   digitalWrite(FLED, LOW);
   digitalWrite(BLED, LOW);
+
+  while (digitalRead(BUTTON)) {
+    readSensors();
+    printSensors();
+    delay(200);
+  }
+
+  calibration(4500);
 }
 
 void loop() {
   if (state == 0) {
     while (digitalRead(BUTTON)) {
       speed = getSpeed();
-      Serial.print("Speed= ");
-      Serial.println(speed);
+      //Serial.print("Speed= ");
+      //Serial.println(speed);
       readSensors();
       printSensors();
-      delay(500);
+      delay(200);
     }
     state = 1;
 
   } else if (state == 1) {
     digitalWrite(FLED, HIGH);
     digitalWrite(BLED, LOW);
-    drive(100, 100);
+    readSensors();
+    byte DL = digitLine() >> 3;
 
-  } else if (state == -1) {
+    if (DL == 0B010 || DL == 0B111) {
+      drive(speed, speed);
+    } else if (DL == 0B100) {
+      drive(speed * 1.4, speed * 0.6);
+    } else if (DL == 0B110) {
+      drive(speed * 1.2, speed * 0.8);
+    } else if (DL == 0B001) {
+      drive(speed * 0.6, speed * 1.4);
+    } else if (DL == 0B011) {
+      drive(speed * 0.8, speed * 1.2);
+    } else if (DL == 0B000 || DL == 0B101) {
+      drive(0, 0);
+      state = -1;
+      beep(2000, 200);
+    }
+  }
+
+  else if (state == -1) {
     digitalWrite(FLED, LOW);
     digitalWrite(BLED, HIGH);
-    drive(-100, -100);
+    readSensors();
+    byte DL = digitLine() | 0B00000111;
+    if (DL == 0B010 || DL == 0B111) {
+      drive(-speed, -speed);
+    } else if (DL == 0B100) {
+      drive(-speed * 1.4, -speed * 0.6);
+    } else if (DL == 0B110) {
+      drive(-speed * 1.2, -speed * 0.8);
+    } else if (DL == 0B001) {
+      drive(-speed * 0.6, -speed * 1.4);
+    } else if (DL == 0B011) {
+      drive(-speed * 0.8, -speed * 1.2);
+    } else if (DL == 0B000 || DL == 0B101) {
+      drive(0, 0);
+      state = 1;
+      beep(4000, 200);
+    }
   }
 }
