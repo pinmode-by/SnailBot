@@ -58,7 +58,7 @@ void calibration(int cycles) {
     minSens[j] = 1023;
     maxSens[j] = 0;
   }
-  drive(50, -50);
+  drive(80, -80);
   for (int i = 0; i < cycles; i++) {
     readSensors();
     for (int j = 0; j < NUMSENS; j++) {
@@ -68,7 +68,7 @@ void calibration(int cycles) {
   }
   drive(0, 0);
   for (int j = 0; j < NUMSENS; j++) {
-    //[j] = (minSens[j] + maxSens[j]) / 2;
+    th[j] = (minSens[j] + maxSens[j]) / 2;
     Serial.print(th[j]);
     Serial.print("  ");
   }
@@ -133,7 +133,7 @@ void setup() {
     delay(200);
   }
 
-  calibration(4500);
+  calibration(10000);
 }
 
 void loop() {
@@ -175,17 +175,17 @@ void loop() {
     digitalWrite(FLED, LOW);
     digitalWrite(BLED, HIGH);
     readSensors();
-    byte DL = digitLine() | 0B00000111;
+    byte DL = digitLine() & 0B00000111;
     if (DL == 0B010 || DL == 0B111) {
       drive(-speed, -speed);
     } else if (DL == 0B100) {
-      drive(-speed * 1.4, -speed * 0.6);
-    } else if (DL == 0B110) {
-      drive(-speed * 1.2, -speed * 0.8);
-    } else if (DL == 0B001) {
       drive(-speed * 0.6, -speed * 1.4);
-    } else if (DL == 0B011) {
+    } else if (DL == 0B110) {
       drive(-speed * 0.8, -speed * 1.2);
+    } else if (DL == 0B001) {
+      drive(-speed * 1.4, -speed * 0.6);
+    } else if (DL == 0B011) {
+      drive(-speed * 1.2, -speed * 0.8);
     } else if (DL == 0B000 || DL == 0B101) {
       drive(0, 0);
       state = 1;
