@@ -152,6 +152,7 @@ void loop() {
     digitalWrite(FLED, HIGH);
     digitalWrite(BLED, LOW);
     readSensors();
+    speed = getSpeed();
     byte DL = digitLine() >> 3;
 
     if (DL == 0B010 || DL == 0B111) {
