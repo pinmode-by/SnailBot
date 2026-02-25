@@ -1,3 +1,3 @@
-Holik bot - old robot, 2021-2024 Arduino uno + L298 + 6 digital line sensors
+Holik_bot - Код для старая версии робота, в 2021-2024 работавшем на соревнованиях. (Arduino Uno + L298 + 6 цифровых датчиков линии)
 
-SnailBot - new robot, Arduino nano + DRV8833 + 6 analog line sensors
+SnailBot - Новый робот, выполненный на собственной печатной плате, разработанной учениками клуба pinMode. (Arduino nano + DRV8833 + 6 аналоговых датчиков)
