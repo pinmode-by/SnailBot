@@ -1,7 +1,7 @@
-SnailBot_horn.stl - front/back support x2
+SnailBot_horn.stl - Передняя/задняя поддержка - 2шт. Также необходимо напечатать зеркальную копию - 2шт.
 
-Mirror it and print x2
+SnailBot_side_support - Боковые поддержки - 2шт
 
-SnailBot_side_support - x2
+SnailBot_18650_box - Коробка для источника питания - 1шт.
 
-SnailBot_LiPo_box - x1
+- Колесо - 4шт.
