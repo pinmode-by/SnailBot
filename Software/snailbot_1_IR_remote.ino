@@ -14,7 +14,7 @@ const int ML1 = 10;     //left motor pin1
 const int ML2 = 6;      //left motor pin2
 const int MR1 = 9;      //right motor pin1
 const int MR2 = 5;      //right motor pin2
-const byte IR_PIN = 1;  // IR remote pin (TSOP4038)
+const int IR_PIN = 12;  // IR remote pin (TSOP4038)
 
 const unsigned long IR_START = 0xF9067984;      // HOME
 const unsigned long IR_STOP = 0xED127984;       // POWER
@@ -39,8 +39,9 @@ enum Command {
 int state = 0;  //state of robot, 0-stop, 1-forward, -1 - back
 int speed = 100;
 const int MINSPEED = 80;
-const int MAXSPEED = 200;
+const int MAXSPEED = 240;
 const int NUMSENS = 6;
+const int START_DELAY=500;
 int sensorPins[NUMSENS] = { A2, A1, A0, A5, A4, A3 };
 int sensor[NUMSENS];  //sensor values
 int maxSens[NUMSENS];
@@ -80,18 +81,26 @@ bool isCmdIR(byte cmd) {
 int getCmdIR() {
   int retCmd = cmdNo;
   if (IrReceiver.decode()) {
-    switch (IrReceiver.decodedIRData.decodedRawData) {
+    unsigned long data=IrReceiver.decodedIRData.decodedRawData;
+
+    Serial.println(data,HEX);
+
+    switch (data) {
       case IR_START:
         retCmd = cmdLFR;
+        Serial.println("LFR");
         break;
       case IR_STOP:
         retCmd = cmdStop;
+        Serial.println("STOP");
         break;
       case IR_TEST:
         retCmd = cmdTest;
+        Serial.println("TEST");
         break;
       case IR_CALIBR:
         retCmd = cmdCalibr;
+        Serial.println("CALIBR");
         break;
       case IR_READ_SENS:
         retCmd = cmdReadSensIR;
@@ -197,7 +206,7 @@ void setup() {
       calibration(10000);
     }
   }
-  Serial.print("setup over");
+  Serial.print("End of setup");
 }
 
 bool pressButton() {
@@ -209,96 +218,85 @@ void LFR() {
   digitalWrite(BLED, LOW);
   readSensors();
   //speed = getSpeed();
-  byte DL = digitLine() >> 3;
+  if (state == 1) {
+    byte DL = digitLine() >> 3;
 
-  if (DL == 0B010 || DL == 0B111) {
-    drive(speed, speed);
-  } else if (DL == 0B100) {
-    drive(speed * 1.4, speed * 0.6);
-  } else if (DL == 0B110) {
-    drive(speed * 1.2, speed * 0.8);
-  } else if (DL == 0B001) {
-    drive(speed * 0.6, speed * 1.4);
-  } else if (DL == 0B011) {
-    drive(speed * 0.8, speed * 1.2);
-  } else if (DL == 0B000 || DL == 0B101) {
-    drive(0, 0);
-    state = -1;
-    beep(2000, 200);
+    if (DL == 0B010 || DL == 0B111) {
+      drive(speed, speed);
+    } else if (DL == 0B100) {
+      drive(speed * 1.4, speed * 0.6);
+    } else if (DL == 0B110) {
+      drive(speed * 1.2, speed * 0.8);
+    } else if (DL == 0B001) {
+      drive(speed * 0.6, speed * 1.4);
+    } else if (DL == 0B011) {
+      drive(speed * 0.8, speed * 1.2);
+    } else if (DL == 0B000 || DL == 0B101) {
+      drive(0, 0);
+      state = -1;
+      beep(2000, 200);
+    }
+  } else if (state == -1) {
+    digitalWrite(FLED, LOW);
+    digitalWrite(BLED, HIGH);
+    readSensors();
+    byte DL = digitLine() & 0B00000111;
+    if (DL == 0B010 || DL == 0B111) {
+      drive(-speed, -speed);
+    } else if (DL == 0B100) {
+      drive(-speed * 0.6, -speed * 1.4);
+    } else if (DL == 0B110) {
+      drive(-speed * 0.8, -speed * 1.2);
+    } else if (DL == 0B001) {
+      drive(-speed * 1.4, -speed * 0.6);
+    } else if (DL == 0B011) {
+      drive(-speed * 1.2, -speed * 0.8);
+    } else if (DL == 0B000 || DL == 0B101) {
+      drive(0, 0);
+      state = 1;
+      beep(4000, 200);
+    }
   }
 }
-else if (state == -1) {
-  digitalWrite(FLED, LOW);
-  digitalWrite(BLED, HIGH);
-  readSensors();
-  byte DL = digitLine() & 0B00000111;
-  if (DL == 0B010 || DL == 0B111) {
-    drive(-speed, -speed);
-  } else if (DL == 0B100) {
-    drive(-speed * 0.6, -speed * 1.4);
-  } else if (DL == 0B110) {
-    drive(-speed * 0.8, -speed * 1.2);
-  } else if (DL == 0B001) {
-    drive(-speed * 1.4, -speed * 0.6);
-  } else if (DL == 0B011) {
-    drive(-speed * 1.2, -speed * 0.8);
-  } else if (DL == 0B000 || DL == 0B101) {
-    drive(0, 0);
-    state = 1;
-    beep(4000, 200);
-  }
-}
-}
+
 void loop() {
   byte cmd = cmdNo;
   //cmd = getCmdIR();
-  if (pressButton()) {
-    cmd = cmdLFR;
-  }
-  if (cmd == cmdNo) {
-    cmd = getCmdBT();
-  }
+  //if (pressButton()) {
+  //  cmd = cmdLFR;
+  //}
+  //if (cmd == cmdNo) {
+    cmd = getCmdIR();
+  //}
 
   switch (cmd) {
     case cmdLFR:
-      digitalWrite(LED, HIGH);
+      digitalWrite(FLED, HIGH);
       delay(START_DELAY);
       LFR();
-      digitalWrite(LED, LOW);
+      digitalWrite(FLED, LOW);
       break;
     case cmdCalibr:
-      calibration();
+      calibration(10000);
       break;
     case cmdReadSensBT:
-      printSensorsBT();
+      //printSensorsBT();
       break;
     case cmdReadSensIR:
-      printSensorsSerial();
+      //printSensorsSerial();
       break;
     case cmdTest:
-      digitalWrite(LED, HIGH);
+      digitalWrite(FLED, HIGH);
       //test_drive();
-      digitalWrite(LED, LOW);
+      digitalWrite(FLED, LOW);
       break;
     case cmdInfoBT:
-      printInfoBT();
+      //printInfoBT();
       break;
     case cmdInfoIR:
-      printInfoSerial();
+      //printInfoSerial();
       break;
 
       //...
   }  // switch
-  if (state == 0) {
-    while (digitalRead(BUTTON)) {
-      speed = getSpeed();
-      //Serial.print("Speed= ");
-      //Serial.println(speed);
-      readSensors();
-      printSensors();
-      delay(200);
-    }
-    state = 1;
-
-  } else if (state == 1) {
-  }
+}
