@@ -39,9 +39,9 @@ enum Command {
 
 String COM_STR[] = { "RUN", "STOP", "CALIBR", "PLUS", "MINUS", "" };
 
-int state = 0;    //state of robot, 0-stop, 1-forward, -1 - back
-int speed = 80;  //default robot speed
-const int V8=500; // 8V power source
+int state = 0;       //state of robot, 0-stop, 1-forward, -1 - back
+int speed = 80;      //default robot speed
+const int V8 = 500;  // 8V power source
 const int MINSPEED = 40;
 const int MAXSPEED = 160;
 const int NUMSENS = 6;
@@ -60,6 +60,7 @@ int th[NUMSENS] = { 300, 300, 300, 300, 300, 300 };  //threshold for each sensor
 void readSensors();
 byte digitLine();
 void calibration(int cycles);
+void readCalibration();
 void printSensors();
 void drive(int left, int right);
 void LFR();
@@ -78,12 +79,14 @@ void plusSpeed() {
   speed = speed + 5;
   if (speed > MAXSPEED) speed = MAXSPEED;
   saveEEPROM();
+  delay(200);
 }
 
 void minusSpeed() {
   speed = speed - 5;
   if (speed < MINSPEED) speed = MINSPEED;
   saveEEPROM();
+  delay(200);
 }
 
 void saveEEPROM() {
@@ -94,7 +97,7 @@ void loadEEPROM() {
   int s;
   EEPROM.get(SPEED_ADR, s);
   if ((s < 0)) {
-    speed = 100;
+    speed = 80;
   } else speed = s;
 }
 
@@ -143,6 +146,19 @@ void calibration(int cycles) {
   digitalWrite(BLED, LOW);
 }
 
+void readCalibration() {
+  int adr = CALIBR_ADR;
+  int val;
+  for (int j = 0; j < NUMSENS; j++) {
+    EEPROM.get(adr, val);
+    if (isnan(val) || (val > 1000) || (val < 0)) {
+      th[j] = 300;
+    } else {
+      th[j] = val;
+    }
+    adr = adr + sizeof(th[j]);
+  }
+}
 
 void printSensors() {
   for (int i = 0; i < NUMSENS; i++) {
@@ -156,9 +172,9 @@ void printSensors() {
 }
 
 void drive(int left, int right) {
-  int v=analogRead(VMETER);//voltage
-  left=(long)left*V8/v; //voltage correction of left motor
-  right=(long)right*V8/v; //voltage correction of right  motor
+  int v = analogRead(VMETER);    //voltage
+  left = (long)left * V8 / v;    //voltage correction of left motor
+  right = (long)right * V8 / v;  //voltage correction of right  motor
   left = constrain(left, -255, 255);
   right = constrain(right, -255, 255);
   if (left > 0) {
@@ -320,6 +336,7 @@ void setup() {
   IrReceiver.begin(IR_PIN, ENABLE_LED_FEEDBACK);
   delay(500);
   loadEEPROM();
+  readCalibration();
 
   digitalWrite(FLED, LOW);
   digitalWrite(BLED, LOW);
